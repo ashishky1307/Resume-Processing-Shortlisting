@@ -1,0 +1,64 @@
+# Environment variables and secrets
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+.next/
+out/
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# IDEs
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Coverage
+coverage/
+.nyc_output
+
+# Temporary files
+*.tmp
+*.temp
+
+# Vercel
+.vercel

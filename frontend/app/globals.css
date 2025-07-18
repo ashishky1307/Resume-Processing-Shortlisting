@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f6f8fa;
+  --foreground: #24292f;
+  --border: #d0d7de;
+  --github-canvas-default: #f6f8fa;
+  --github-canvas-subtle: #f6f8fa;
+  --github-fg-default: #24292f;
+  --github-fg-muted: #656d76;
+  --github-border-default: #d0d7de;
+  --github-border-muted: #d8dee4;
+  --github-accent-emphasis: #0969da;
+  --github-accent-fg: #0969da;
+  --github-success-emphasis: #1a7f37;
+  --github-danger-emphasis: #cf222e;
+  --github-attention-emphasis: #9a6700;
+  --github-btn-primary-bg: #2da44e;
+  --github-btn-primary-hover-bg: #2c974b;
+  --github-btn-primary-text: #f6f8fa;
+  --github-btn-bg: #f6f8fa;
+  --github-btn-hover-bg: #f3f4f6;
+  --github-btn-border: #d0d7de;
+  --github-input-bg: #f6f8fa;
+  --github-input-border: #d0d7de;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0d1117;
+    --foreground: #e6edf3;
+    --border: #30363d;
+    --github-canvas-default: #0d1117;
+    --github-canvas-subtle: #161b22;
+    --github-fg-default: #e6edf3;
+    --github-fg-muted: #7d8590;
+    --github-border-default: #30363d;
+    --github-border-muted: #21262d;
+    --github-accent-emphasis: #1f6feb;
+    --github-accent-fg: #58a6ff;
+    --github-success-emphasis: #238636;
+    --github-danger-emphasis: #da3633;
+    --github-attention-emphasis: #d29922;
+    --github-btn-primary-bg: #238636;
+    --github-btn-primary-hover-bg: #2ea043;
+    --github-btn-primary-text: #f6f8fa;
+    --github-btn-bg: #21262d;
+    --github-btn-hover-bg: #30363d;
+    --github-btn-border: #30363d;
+    --github-input-bg: #0d1117;
+    --github-input-border: #30363d;
+  }
+}
+
+body {
+  background: var(--github-canvas-default);
+  color: var(--github-fg-default);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+}
+
+/* GitHub-style button classes */
+@layer components {
+  .btn-github {
+    @apply inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md border transition-colors;
+    background-color: var(--github-btn-bg);
+    border-color: var(--github-btn-border);
+    color: var(--github-fg-default);
+  }
+  
+  .btn-github:hover {
+    background-color: var(--github-btn-hover-bg);
+  }
+  
+  .btn-github-primary {
+    @apply inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md border-0 transition-colors;
+    background-color: var(--github-btn-primary-bg);
+    color: var(--github-btn-primary-text);
+  }
+  
+  .btn-github-primary:hover {
+    background-color: var(--github-btn-primary-hover-bg);
+  }
+  
+  .github-card {
+    background-color: var(--github-canvas-default);
+    border: 1px solid var(--github-border-default);
+    border-radius: 6px;
+  }
+  
+  .github-input {
+    background-color: var(--github-input-bg);
+    border: 1px solid var(--github-input-border);
+    border-radius: 6px;
+    color: var(--github-fg-default);
+  }
+  
+  .github-input:focus {
+    border-color: var(--github-accent-emphasis);
+    outline: 2px solid var(--github-accent-emphasis);
+    outline-offset: -2px;
+  }
+}
