@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Processing System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .resume-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .parsed-data {
+            white-space: pre-line;
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.25rem;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .spinner-border {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container resume-container">
+        <h1 class="mb-4 text-center">Resume Processing System</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                Upload Resume
+            </div>
+            <div class="card-body">                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="resumeFile" class="form-label">Select a resume file (PDF, DOCX, TXT)</label>
+                        <input class="form-control" type="file" id="resumeFile" name="file" accept=".pdf,.docx,.txt" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="saveToDb">
+                        <label class="form-check-label" for="saveToDb">Save to database</label>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">
+                            <span class="spinner-border spinner-border-sm me-2" id="uploadSpinner" role="status" aria-hidden="true"></span>
+                            Upload and Process
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="extractedTextSection" class="card mb-4" style="display: none;">
+            <div class="card-header">
+                Extracted Text
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <textarea class="form-control" id="extractedText" rows="10" readonly></textarea>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success" id="parseBtn">
+                        <span class="spinner-border spinner-border-sm me-2" id="parseSpinner" role="status" aria-hidden="true"></span>
+                        Extract Information
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    <div id="parsedDataSection" class="card" style="display: none;">
+            <div class="card-header">
+                Extracted Information
+            </div>
+            <div class="card-body">
+                <div id="parsedData" class="parsed-data"></div>
+                <div id="dbSaveStatus" class="mt-3" style="display: none;">
+                    <div class="alert alert-success">
+                        Resume data saved to database with Candidate ID: <span id="candidateId"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="candidatesSection" class="card mt-4" style="display: none;">
+            <div class="card-header">
+                Candidates in Database
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <button type="button" class="btn btn-info" id="loadCandidatesBtn">
+                        <span class="spinner-border spinner-border-sm me-2" id="loadCandidatesSpinner" role="status" aria-hidden="true"></span>
+                        Load Candidates
+                    </button>
+                    <select class="form-select d-inline-block ms-2" style="width: auto;" id="statusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="shortlisted">Shortlisted</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Years Exp</th>
+                                <th>Skills</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="candidatesTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>        <div id="errorSection" class="alert alert-danger mt-4" style="display: none;">
+            <div id="errorMessage"></div>
+        </div>
+    </div>
+    
+    <!-- Resume Preview Modal -->
+    <div class="modal fade" id="resumePreviewModal" tabindex="-1" aria-labelledby="resumePreviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resumePreviewModalLabel">Resume Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="ratio ratio-16x9">
+                        <iframe id="resumePreviewFrame" src="" allowfullscreen></iframe>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a id="resumeDownloadLink" href="#" target="_blank" class="btn btn-primary">
+                        Open in New Tab
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>        document.addEventListener('DOMContentLoaded', function() {
+            const apiUrl = 'http://localhost:8000'; // Change this if your API is hosted elsewhere
+            const uploadForm = document.getElementById('uploadForm');
+            const extractedTextSection = document.getElementById('extractedTextSection');
+            const extractedText = document.getElementById('extractedText');
+            const parsedDataSection = document.getElementById('parsedDataSection');
+            const parsedData = document.getElementById('parsedData');
+            const errorSection = document.getElementById('errorSection');
+            const errorMessage = document.getElementById('errorMessage');
+            const parseBtn = document.getElementById('parseBtn');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const parseSpinner = document.getElementById('parseSpinner');
+            const uploadSpinner = document.getElementById('uploadSpinner');
+            const loadCandidatesBtn = document.getElementById('loadCandidatesBtn');
+            const loadCandidatesSpinner = document.getElementById('loadCandidatesSpinner');
+            const statusFilter = document.getElementById('statusFilter');
+            const candidatesTableBody = document.getElementById('candidatesTableBody');
+
+            // Handle file upload
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const fileInput = document.getElementById('resumeFile');
+                
+                if (!fileInput.files.length) {
+                    showError('Please select a file to upload.');
+                    return;
+                }                const file = fileInput.files[0];
+                const saveToDb = document.getElementById('saveToDb').checked;
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('parse', 'true'); // Always parse since we need the data
+                formData.append('save_to_db', saveToDb ? 'true' : 'false');
+
+                // Show loading state
+                uploadBtn.disabled = true;
+                uploadSpinner.style.display = 'inline-block';
+                hideError();
+
+                fetch(`${apiUrl}/upload-resume/`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.detail || 'Error uploading file');
+                        });
+                    }
+                    return response.json();
+                })                .then(data => {
+                    // Display the extracted text
+                    extractedText.value = data.extracted_text;
+                    extractedTextSection.style.display = 'block';
+                    
+                    // If data was parsed, display it immediately
+                    if (data.parsed_data) {
+                        // Convert Markdown to HTML
+                        let htmlContent = data.parsed_data
+                            .replace(/## (.*)/g, '<h2>$1</h2>')
+                            .replace(/- (.*)/g, '<li>$1</li>')
+                            .replace(/\n\n/g, '<br>');
+                        
+                        // Wrap lists in <ul> tags
+                        htmlContent = htmlContent.replace(/<li>.*?(<h2>|$)/gs, function(match) {
+                            return '<ul>' + match.replace(/<h2>/g, '</ul><h2>');
+                        });
+                        htmlContent = htmlContent.replace(/<\/ul><h2>/g, '</ul>\n<h2>');
+                        
+                        // Display the parsed data
+                        parsedData.innerHTML = htmlContent;
+                        parsedDataSection.style.display = 'block';
+                        
+                        // Show candidate ID if saved to DB
+                        if (data.candidate_id) {
+                            document.getElementById('candidateId').textContent = data.candidate_id;
+                            document.getElementById('dbSaveStatus').style.display = 'block';
+                            
+                            // Show candidates section
+                            document.getElementById('candidatesSection').style.display = 'block';
+                        }
+                    }
+                    
+                    // Reset loading state
+                    uploadBtn.disabled = false;
+                    uploadSpinner.style.display = 'none';
+                })
+                .catch(error => {
+                    showError(error.message);
+                    uploadBtn.disabled = false;
+                    uploadSpinner.style.display = 'none';
+                });
+            });
+
+            // Handle parse button click
+            parseBtn.addEventListener('click', function() {
+                const text = extractedText.value.trim();
+                
+                if (!text) {
+                    showError('No text to parse.');
+                    return;
+                }
+
+                // Show loading state
+                parseBtn.disabled = true;
+                parseSpinner.style.display = 'inline-block';
+                hideError();
+
+                const formData = new FormData();
+                formData.append('text', text);
+
+                fetch(`${apiUrl}/parse-text/`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.detail || 'Error parsing text');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Convert Markdown to HTML (simple conversion for ## headers and lists)
+                    let htmlContent = data.parsed_data
+                        .replace(/## (.*)/g, '<h2>$1</h2>')
+                        .replace(/- (.*)/g, '<li>$1</li>')
+                        .replace(/\n\n/g, '<br>');
+                    
+                    // Wrap lists in <ul> tags
+                    htmlContent = htmlContent.replace(/<li>.*?(<h2>|$)/gs, function(match) {
+                        return '<ul>' + match.replace(/<h2>/g, '</ul><h2>');
+                    });
+                    htmlContent = htmlContent.replace(/<\/ul><h2>/g, '</ul>\n<h2>');
+                    
+                    // Display the parsed data
+                    parsedData.innerHTML = htmlContent;
+                    parsedDataSection.style.display = 'block';
+                    
+                    // Reset loading state
+                    parseBtn.disabled = false;
+                    parseSpinner.style.display = 'none';
+                })
+                .catch(error => {
+                    showError(error.message);
+                    parseBtn.disabled = false;
+                    parseSpinner.style.display = 'none';
+                });
+            });
+
+            // Helper functions
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorSection.style.display = 'block';
+            }
+
+            function hideError() {
+                errorSection.style.display = 'none';
+            }
+
+            // Load candidates from database
+            loadCandidatesBtn.addEventListener('click', function() {
+                const status = statusFilter.value;
+                
+                // Show loading state
+                loadCandidatesBtn.disabled = true;
+                loadCandidatesSpinner.style.display = 'inline-block';
+                
+                let url = `${apiUrl}/candidates/`;
+                if (status) {
+                    url += `?status=${status}`;
+                }
+                
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(data => {
+                                throw new Error(data.detail || 'Error loading candidates');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(candidates => {
+                        // Clear the table
+                        candidatesTableBody.innerHTML = '';
+                        
+                        if (candidates.length === 0) {
+                            const row = document.createElement('tr');
+                            row.innerHTML = '<td colspan="7" class="text-center">No candidates found</td>';
+                            candidatesTableBody.appendChild(row);
+                        } else {
+                            // Add each candidate to the table
+                            candidates.forEach(candidate => {
+                                const row = document.createElement('tr');
+                                
+                                // Format the skills
+                                const skillsList = candidate.skills.join(', ');
+                                  // Create status badge
+                                const statusClass = {
+                                    'pending': 'bg-secondary',
+                                    'shortlisted': 'bg-success',
+                                    'rejected': 'bg-danger'
+                                }[candidate.status] || 'bg-secondary';
+                                
+                                row.innerHTML = `
+                                    <td>${candidate.candidate_id}</td>
+                                    <td>${candidate.full_name}</td>
+                                    <td>${candidate.email || 'N/A'}</td>
+                                    <td>${candidate.years_experience || 'N/A'}</td>
+                                    <td>${skillsList || 'N/A'}</td>
+                                    <td><span class="badge ${statusClass}">${candidate.status}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success shortlist-btn" data-id="${candidate.candidate_id}" 
+                                            ${candidate.status === 'shortlisted' ? 'disabled' : ''}>
+                                            Shortlist
+                                        </button>
+                                        ${candidate.resume_available ? 
+                                          `<button class="btn btn-sm btn-info view-resume-btn ms-1" data-id="${candidate.candidate_id}" 
+                                            title="View Resume: ${candidate.original_filename || 'Resume'}">
+                                            View Resume
+                                          </button>` : ''}
+                                    </td>
+                                `;
+                                candidatesTableBody.appendChild(row);
+                            });
+                            
+                            // Add event listeners to shortlist buttons
+                            document.querySelectorAll('.shortlist-btn').forEach(btn => {
+                                btn.addEventListener('click', function() {
+                                    const candidateId = this.getAttribute('data-id');
+                                    shortlistCandidate(candidateId, this);
+                                });
+                            });
+                        }
+                        
+                        // Reset loading state
+                        loadCandidatesBtn.disabled = false;
+                        loadCandidatesSpinner.style.display = 'none';
+                    })
+                    .catch(error => {
+                        showError(error.message);
+                        loadCandidatesBtn.disabled = false;
+                        loadCandidatesSpinner.style.display = 'none';
+                    });
+            });
+            
+            // Filter change event
+            statusFilter.addEventListener('change', function() {
+                if (document.querySelector('#candidatesTableBody tr')) {
+                    // Only trigger reload if table has been loaded before
+                    loadCandidatesBtn.click();
+                }
+            });
+            
+            // Shortlist a candidate
+            function shortlistCandidate(candidateId, buttonElement) {
+                buttonElement.disabled = true;
+                buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                
+                fetch(`${apiUrl}/candidates/${candidateId}/shortlist`, {
+                    method: 'POST'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.detail || 'Error shortlisting candidate');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update the row to show shortlisted status
+                    const row = buttonElement.closest('tr');
+                    const statusCell = row.querySelector('td:nth-child(6)');
+                    statusCell.innerHTML = '<span class="badge bg-success">shortlisted</span>';
+                    buttonElement.innerHTML = 'Shortlisted';
+                    buttonElement.disabled = true;
+                })
+                .catch(error => {
+                    showError(error.message);
+                    buttonElement.innerHTML = 'Shortlist';
+                    buttonElement.disabled = false;
+                });
+            }
+            
+            // Initialize database if needed
+            fetch(`${apiUrl}/init-db`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .catch(error => console.error('Database initialization error:', error));
+            
+            // Add event delegation for viewing resumes
+            candidatesTableBody.addEventListener('click', function(e) {
+                if (e.target.classList.contains('view-resume-btn') || e.target.parentElement.classList.contains('view-resume-btn')) {
+                    const button = e.target.classList.contains('view-resume-btn') ? e.target : e.target.parentElement;
+                    const candidateId = button.getAttribute('data-id');
+                    viewResumeFile(candidateId);
+                }
+            });
+              // Function to view resume file
+            function viewResumeFile(candidateId) {
+                fetch(`${apiUrl}/resumes/${candidateId}/view`)
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(data => {
+                                throw new Error(data.detail || 'Error getting resume file');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Set the iframe source to the resume URL
+                        const resumePreviewFrame = document.getElementById('resumePreviewFrame');
+                        const resumeDownloadLink = document.getElementById('resumeDownloadLink');
+                        const resumePreviewModal = new bootstrap.Modal(document.getElementById('resumePreviewModal'));
+                        
+                        // Set the modal title
+                        document.getElementById('resumePreviewModalLabel').textContent = 
+                            `Resume Preview: ${data.filename || 'Resume'}`;
+                        
+                        // Set the iframe source
+                        resumePreviewFrame.src = data.resume_url;
+                        
+                        // Set the download link
+                        resumeDownloadLink.href = data.resume_url;
+                        
+                        // Show the modal
+                        resumePreviewModal.show();
+                    })
+                    .catch(error => {
+                        showError(error.message);
+                    });
+            }
+        });
+        
+        // Document ready function
+            document.addEventListener('DOMContentLoaded', function() {
+                // Check S3 configuration on load
+                fetch(`${apiUrl}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("API is running:", data.message);
+                    })
+                    .catch(error => {
+                        console.error("API Error:", error);
+                        showError("Failed to connect to the API. Please check if the server is running.");
+                    });
+                    
+                // Initialize database tables
+                fetch(`${apiUrl}/init-db`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Database initialization:", data.message);
+                })
+                .catch(error => {
+                    console.error("Database initialization error:", error);
+                });
+            });
+            
+            // Resume preview modal event handling
+            document.getElementById('resumePreviewModal').addEventListener('hide.bs.modal', function () {
+                // Clear the iframe source when the modal is closed to stop any PDF rendering
+                document.getElementById('resumePreviewFrame').src = '';
+            });
+            
+            // Error handling for file uploads - especially large files
+            document.getElementById('resumeFile').addEventListener('change', function() {
+                const fileInput = this;
+                const maxSizeInMB = 10; // 10MB max file size
+                const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+                
+                if (fileInput.files.length > 0) {
+                    const fileSize = fileInput.files[0].size;
+                    if (fileSize > maxSizeInBytes) {
+                        showError(`File is too large. Maximum size is ${maxSizeInMB}MB.`);
+                        fileInput.value = ''; // Clear the file input
+                    } else {
+                        hideError();
+                    }
+                }
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "name": "resume-auth-backend",
+  "version": "1.0.0",
+  "description": "Authentication backend for Resume Processing System",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-mysql-session": "^3.0.3",
+    "express-session": "^1.18.1",
+    "mysql2": "^3.6.5",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "authentication",
+    "passport",
+    "google-oauth",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT"
+}
